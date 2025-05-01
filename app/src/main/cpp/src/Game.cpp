@@ -67,6 +67,13 @@ Game::~Game()
     for (int i = 0; i < 3; ++i) {
         delete States[i];
     }
+
+    CHAR_SIZE = {0.053f,0.102f };
+    BRICK_SIZE = {0.043f,0.092f};
+    SQUERE_SIZE = { 0.474f,0.462f };
+
+
+
 }
 
 void Game::Init()

@@ -136,10 +136,11 @@ Engine::~Engine() {
     }
 
     delete ui;
+    delete BrickDestroyer;
 }
 
 void Engine::render() {
-
+    updateRenderArea();
     auto currentTime = std::chrono::steady_clock::now();
     float deltaTime = std::chrono::duration<float>(currentTime - lastTime).count();  // секунды
     lastTime = currentTime;
@@ -232,4 +233,20 @@ void Engine::handleInput() {
     // clear the motion input count in this buffer for main thread to re-use.
     android_app_clear_motion_events(inputBuffer);
 
+}
+void Engine::updateRenderArea() {
+    EGLint width;
+    eglQuerySurface(display_, surface_, EGL_WIDTH, &width);
+
+    EGLint height;
+    eglQuerySurface(display_, surface_, EGL_HEIGHT, &height);
+
+    if (width != width_ || height != height_) {
+        width_ = width;
+        height_ = height;
+        glViewport(0, 0, width, height);
+
+        // make sure that we lazily recreate the projection matrix before we render
+      //  shaderNeedsNewProjectionMatrix_ = true;
+    }
 }

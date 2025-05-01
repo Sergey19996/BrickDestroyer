@@ -33,6 +33,7 @@ struct Particle
 class ParticleGenerator {
 public:
     ParticleGenerator(Shader shader, Texture texture, unsigned int amount, bool isRandCoord = true);
+    ~ParticleGenerator();
 
     virtual void Update(float dt);
 
@@ -47,7 +48,7 @@ protected:
     Shader shader;
     Texture texture;
     unsigned int VAO;
-
+    unsigned int  VBO, EBO;
     void init(bool& isRandCoord);
 
     int firstUnusedParticle();

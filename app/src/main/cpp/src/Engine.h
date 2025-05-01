@@ -19,6 +19,9 @@ public:
     void render();
 
 private:
+    void updateRenderArea();
+
+
     void init();
 
     Game* BrickDestroyer;

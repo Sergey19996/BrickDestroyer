@@ -5,7 +5,7 @@
 #include "Engine.h"
 #include <game-activity/GameActivity.cpp>
 #include <game-text-input/gametextinput.cpp>
-
+#include "graphics/ResourceManager.h"
 extern "C" {
 
 #include <game-activity/native_app_glue/android_native_app_glue.c>
@@ -35,6 +35,7 @@ void handle_cmd(android_app *pApp, int32_t cmd) {
                 auto *pRenderer = reinterpret_cast<Engine*>(pApp->userData);
                 pApp->userData = nullptr;
                 delete pRenderer;
+                ResourceManager::clear();
             }
             break;
         default:

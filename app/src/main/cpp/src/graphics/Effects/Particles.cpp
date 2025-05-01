@@ -11,7 +11,12 @@ ParticleGenerator::ParticleGenerator(Shader shader, Texture texture, unsigned in
 {
     this->init(IsRandCoord);
 }
-
+ParticleGenerator::~ParticleGenerator() {
+    glDeleteVertexArrays(1, &VAO);
+    // Если ты сохраняешь VBO и EBO в члены класса — освободи и их:
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
+}
 void ParticleGenerator::Update(float dt)
 {
 
@@ -104,7 +109,7 @@ void ParticleGenerator::init(bool& isRandCoord)
             1,3,0
     };
 
-    unsigned int  VBO, EBO;
+
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
