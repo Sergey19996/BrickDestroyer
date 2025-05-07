@@ -98,10 +98,10 @@ std::vector<uint8_t>& indicesGenerator::AlgorithmLakeGround(unsigned int width, 
 {
     indices.clear();
     indices.resize(width * height);  //хранит значения Uint8_t где 255 макс число
+    lakesRoots.clear();
 
-
-    //std::vector<unsigned int> lakesRoots(7);
-    std::vector<unsigned int> lakesRoots(LakesCount);
+//std::vector<unsigned int> lakesRoots(7);
+    lakesRoots.resize(LakesCount);
     AlgorithmBasicGround(width, height);   // заполняем уровень землей
 
 
@@ -124,68 +124,7 @@ std::vector<uint8_t>& indicesGenerator::AlgorithmLakeGround(unsigned int width, 
 
     };
 
-    for (int i = 0; i < lakesRoots.size(); i++)
-    {
 
-
-        int RootY = lakesRoots[i] / width;   //переводим в 2д
-        int RootX = lakesRoots[i] % width;
-
-        for (int y = RootY - 1; y < RootY + 2; y++)     // бежим вокруг корня
-        {
-            if (y < 0) {
-
-                continue;
-            }
-            if (y >= height)
-                continue;
-
-            for (int x = RootX - 1; x < RootX + 2; x++) {
-
-                if (x < 0) {
-
-                    continue;
-                }
-                if (x >= width)
-                    continue;
-
-                if (x == RootX && y == RootY)
-                    continue;
-                if (indices[y * width + x] == WATERIDX)
-                    continue;
-
-
-
-                auto r = [&](int dx, int dy) {
-                    int nx = x + dx, ny = y + dy;
-                    return (nx >= 0 && nx < width && ny >= 0 && ny < indices.size() / width) && indices[ny * width + nx] == WATERIDX;
-                };
-
-
-
-                char Celldata = 0;
-                Celldata |= r(-1, -1) << 7;  // LeftUp
-                Celldata |= r(0, -1) << 6;   // Up
-                Celldata |= r(1, -1) << 5;   //RightUp
-                Celldata |= r(-1, 0) << 4;   //left
-                Celldata |= r(1, 0)  << 3;    //right
-                Celldata |= r(-1, 1) << 2;   //leftDown
-                Celldata |=r(0, 1) << 1;    //Down
-                Celldata |=r(1, 1) << 0;    //rightDown
-                uint8_t idx = 0;
-
-                if (checker.findIndex(Celldata, idx)) {
-                    indices[y * width + x] = idx;
-                }
-
-
-
-
-            }
-
-        }
-
-    }
 
     return indices;
 }

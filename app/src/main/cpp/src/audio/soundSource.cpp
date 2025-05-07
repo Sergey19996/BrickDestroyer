@@ -26,13 +26,16 @@ void SoundSource::generate()
 
 }
 
-void SoundSource::Play(const ALuint buffer_to_play){
+void SoundSource::Play(const ALuint buffer_to_play,float volume){
 
     if (buffer_to_play != p_buffer) {
         p_buffer = buffer_to_play;
         alSourcei(p_source, AL_BUFFER, (ALint)p_buffer);
 
     }
+
+    // Устанавливаем громкость
+    alSourcef(p_source, AL_GAIN, volume);
     alSourcePlay(p_source);
 
 }

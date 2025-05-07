@@ -59,12 +59,20 @@ protected:
 
 class ui_BackGround : public  ui{
 public:
-ui_BackGround(const float& Width, const float& Height);
+ui_BackGround(const float& Width, const float& Height,Texture* texture);
 
 };
+
 class ui_BackCharacter : public  ui{
 public:
     ui_BackCharacter(const float& Width, const float& Height);
+
+};
+
+class ui_Health : public  ui{
+public:
+    ui_Health(const float& Width, const float& Height);
+
 
 };
 class ui_GO : public  ui_Button{

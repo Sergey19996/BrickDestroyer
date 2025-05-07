@@ -22,16 +22,17 @@ void ui::Draw(SpriteRenderer &renderer) {
         Shader.setvec2("spriteScale", { rect.UVScale.x / TexWidth,rect.UVScale.y / TexHeight });
 // переводим позицию с пикселей в диапозон от 0 до 1
         Shader.setvec2("uv", { rect.UVPos.x / TexWidth,rect.UVPos.y / TexHeight });
-        //UVCoords
-        if(changeColor)
-        Shader.setvec4("color",  {rect.Use,rect.Use,rect.Use,1.0f});
-        else
-            Shader.setvec4("color",  {1.0f,1.0f,1.0f,1.0f});
+
+
+
+            Shader.setvec4("color", {1.0f, 1.0f, 1.0f, 1.0f});
+            if(changeColor)
+            Shader.setBool("isWhite", rect.Use);
+
+
+
 
         renderer.DrawSprite(*texture, {rect.x,rect.y}, {rect.w,rect.h}, 0);
-
-
-
 
 }
 
@@ -90,9 +91,9 @@ ui_Arrow::ui_Arrow(const float & Width, const float &Height, charDirection direc
 
 
 
-ui_BackGround::ui_BackGround(const float &Width, const float &Height) : ui(Width, Height) {
+ui_BackGround::ui_BackGround(const float &Width, const float &Height, Texture* texture) : ui(Width, Height) {
 
-    texture = &ResourceManager::GetTexture("MainBack");
+    this->texture = texture;
     float texW = texture->Width / Width * 0.5f ;
 //float texH = texture->Height / Height * 0.5f;
     rect = {   0.5f * Width - texW * Width, 0.0f,
@@ -100,7 +101,7 @@ ui_BackGround::ui_BackGround(const float &Width, const float &Height) : ui(Width
                {0.0f,0.0f},
                {texture->Width,texture->Height},
                {{0.0f,0.0f},{0.0f,0.0f}},
-               true
+               false
     };
 
 
@@ -127,7 +128,7 @@ float texH = texture->Height / Height * 0.5f;
                {0.0f,0.0f},
                {texture->Width,texture->Height},
                {{0.0f,0.0f},{0.0f,0.0f}},
-               true
+               false
     };
 
 
@@ -150,16 +151,31 @@ ui_START::ui_START(const float &Width, const float &Height) : ui_Button(Width, H
                {0.0f,0.0f},
                {texture->Width,texture->Height},
                {{0.4f * Width,0.75f * Height},{0.2f * Width,0.2f * Height}},
-               true
+               false
     };
 changeColor = false;
 
 }
 
-ui_Credits::ui_Credits(const float &Width, const float &Height) : ui_Button(Width, Height){
+
+ui_GO::ui_GO(const float &Width, const float &Height) : ui_Button(Width,Height) {
+    rect = {   0.4f * Width, 0.75f * Height,
+               0.2f * Width , 0.2f * Height ,
+               {0.0f,0.0f},
+               {232.0f,124.0f},
+               {{0.4f * Width,0.75f * Height},{0.2f * Width,0.2f * Height}},
+               false
+    };
+    texture = &ResourceManager::GetTexture("Go");
+}
+
+ui_Button::ui_Button(const float &Width, const float &Height) : ui(Width, Height),state(GameState::GAME_ACTIVE)  {
+
+}
+
+ui_Credits::ui_Credits(const float &Width, const float &Height): ui_Button(Width, Height) {
     texture = &ResourceManager::GetTexture("MainCredits");
-    float texW = texture->Width / Width * 0.5f ;
-    float texH = texture->Height / Height * 0.5f;
+
 
 
     Texture* texture2 = &ResourceManager::GetTexture("MainBack");
@@ -173,22 +189,24 @@ ui_Credits::ui_Credits(const float &Width, const float &Height) : ui_Button(Widt
                {0.0f,0.0f},
                {texture->Width,texture->Height},
                {{texW2 + 0.332f * Width,0.0f},{0.2f * Width,0.174f * Height}},
-               true
+               false
     };
-    changeColor = false;
-    state = GameState::GAME_WIN;
+
+state = GameState::GAME_CREDITS;
+   changeColor  = false;
 }
 
-ui_GO::ui_GO(const float &Width, const float &Height) : ui_Button(Width,Height) {
-    rect = {   0.4f * Width, 0.75f * Height,
-               0.2f * Width , 0.2f * Height ,
+ui_Health::ui_Health(const float &Width, const float &Height) : ui(Width, Height) {
+
+    texture = &ResourceManager::GetTexture("heart");
+
+    rect = {   Width / 2.0f - texture->Width , 0.118f * Height + texture->Height * 0.35f,
+               0.05f * Width * 0.5f , 0.118f * Height * 0.5f ,
                {0.0f,0.0f},
-               {232.0f,124.0f},
-               {{0.4f * Width,0.75f * Height},{0.2f * Width,0.2f * Height}}
+               {texture->Width,texture->Height},
+               {{0.0f,0.0f},{0.0f,0.0f}},
+               false
     };
-    texture = &ResourceManager::GetTexture("Go");
-}
 
-ui_Button::ui_Button(const float &Width, const float &Height) : ui(Width, Height),state(GameState::GAME_ACTIVE)  {
 
 }

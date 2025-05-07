@@ -35,12 +35,12 @@ GameLevel* gameLevel;
 SoundDevice* soundDevice; //singleton
 SoundSource Speaker;
 MusicBuffer* music;
-
+uint32_t Sound_BrickDestroy;
 //bool::Game::Keys[GLFW_KEY_LAST] = { 0 };  //GLFW_KEY_LAST это константа, которая задаёт максимальное количество клавиш, распознаваемых GLFW.
 //bool Game::KeysProcessed[GLFW_KEY_LAST] = { 0 };
 
 // Initial velocity of the player paddle
-const glm::vec2 INITIAL_PLAYER_VELOCITY(100.0f,0.0f);
+const glm::vec2 INITIAL_PLAYER_VELOCITY(150.0f,0.0f);
 glm::vec2 CURRENT_PLAYER_VELOCITY(0.0f, 0.0f);
 
 const float timeClamp = 0.05f;
@@ -54,11 +54,13 @@ Game::Game(android_app* App_,float width, float height) : pApp(App_), Width(widt
     States[GAME_MENU]  = new GameMenuState();
     States[GAME_WIN]   = new GameWinState();
     State = States[GAME_ACTIVE];
+
 }
 
 Game::~Game()
 {
     delete renderer;
+    delete waterRenderer;
     delete particles;
     delete player;
     delete gameLevel;
@@ -74,6 +76,7 @@ Game::~Game()
 
 
 
+
 }
 
 void Game::Init()
@@ -84,24 +87,36 @@ void Game::Init()
     SQUERE_SIZE = {SQUERE_SIZE.x * Width, SQUERE_SIZE.y * Height};
     offset = { SQUERE_Offset_RATIO.x * Width, SQUERE_Offset_RATIO.y * Height };
     CURRENT_PLAYER_VELOCITY = INITIAL_PLAYER_VELOCITY * 2.0f;
-    if (!loadGame(saveData, "save/saveGame.bin")) // when we go out from the game in some progress
-        saveGame(saveData, "save/saveGame.bin");
 
-    if (!loadGame(RECORD, "save/saveRecord.bin"))
-        saveGame(RECORD, "save/saveRecord.bin");
+    std::string path = pApp->activity->internalDataPath;
+     saveGamePath = path + "/saveGame.bin";
+     saveRecordPath = path + "/saveRecord.bin";
 
-    soundDevice = SoundDevice::get();
-    //uint32_t Music = SoundBuffer::get()->addSoundEffect("Assets/audio/Main_Music.mp3");
-    //Speaker.generate();
-    //Speaker.Play(Music);*/
+// Загружаем прогресс
+    if (!loadGame(saveData, saveGamePath)) {
+        saveGame(saveData, saveGamePath);  // Если не удалось загрузить, сохраняем
+    }
 
+    if (!loadGame(RECORD, saveRecordPath)) {
+        saveGame(RECORD, saveRecordPath);  // Если не удалось загрузить, сохраняем
+    }
+
+    //Sound init
     ResourceManager::Init(pApp->activity->assetManager);
-    music = new MusicBuffer(ResourceManager::OpenAsset("audio/Main_Music.wav"));
+
+    // Sound
+    soundDevice = SoundDevice::get();
+    Sound_BrickDestroy = SoundBuffer::get()->addSoundEffect(ResourceManager::OpenAsset("audio/destroy.wav"), pApp->activity);
+    Speaker.generate();
+
+
+    //Music
+    music = new MusicBuffer(ResourceManager::OpenAsset("audio/Main_Music.wav"),pApp->activity);
     music->Play();
 
     ResourceManager::LoadShader( "shaders/vertexShader.glsl", "shaders/fragmentShader.glsl", "sprite");
     ResourceManager::LoadShader( "shaders/particleVS.glsl", "shaders/particleFS.glsl", "particle");
-
+    ResourceManager::LoadShader( "shaders/waterVS.glsl", "shaders/waterFS.glsl", "water");
 
 
 
@@ -116,9 +131,21 @@ void Game::Init()
     ResourceManager::LoadTexture("textures/MainMenuChar.png", "MainChar");
     ResourceManager::LoadTexture("textures/MainMenuCredits.png","MainCredits");
     ResourceManager::LoadTexture("textures/MainMenuStart.png","MainStart");
+    ResourceManager::LoadTexture("textures/CreditsBack.png","Credits");
+    ResourceManager::LoadTexture("textures/Water.png", "water");
+    ResourceManager::LoadTexture("textures/Heart.png",  "heart");
+
 
     renderer = new SpriteRenderer(ResourceManager::GetShader("sprite"));  // передаем для плейна, который берёт тайл в 128
+    waterRenderer = new SpriteRenderer(ResourceManager::GetShader("water"));
+
+
     gameLevel = new GameLevel();
+    gameLevel->BrickDestroyed =  [&]() { // созданный слот в gamelevel был инициалищирован в game и будет вызван у себя
+        Speaker.Play(Sound_BrickDestroy, 0.25f);
+    };
+
+
     gameLevel->Generate(&ResourceManager::GetTexture("plates"), BRICK_SIZE, offset, SQUERE_SIZE,saveData.Level);
     particles = new ParticleGenerator(ResourceManager::GetShader("particle"), ResourceManager::GetTexture("Stones"), 100);
 
@@ -131,13 +158,16 @@ void Game::Init()
     ResourceManager::GetShader("sprite").setMat4("projection", ortoMatrix);
     ResourceManager::GetShader("particle").use().setInt("texture0", 0);
     ResourceManager::GetShader("particle").setMat4("projection", ortoMatrix);
+    ResourceManager::GetShader("water").use().setInt("texture0", 0);
+    ResourceManager::GetShader("water").setMat4("projection", ortoMatrix);
+
 
     CHAR_SIZE = {CHAR_SIZE.x * Width, CHAR_SIZE.y * Height};
 
     player = new character(offset-CHAR_SIZE / 4.0f, CHAR_SIZE, CURRENT_PLAYER_VELOCITY , 0, &ResourceManager::GetTexture("Char"),charDirection::Right);
 
     text = new TextRenderer(this->Width, this->Height);
-    text->Load("fonts/Rubik-ExtraBold.ttf", TEXTSIZE);
+    text->Load("fonts/PressStart2P-Regular.ttf", TEXTSIZE);
 
 
 }
@@ -179,16 +209,19 @@ void Game::Render(){
 
 
     music->UpdateBufferStream();
-
+    music->UpdateVolume();
 
     ResourceManager::GetShader("sprite").use();
     ResourceManager::GetShader("sprite").setvec2("spriteScale", { 1.0f,1.0f });
     ResourceManager::GetShader("sprite").setvec2("uv", { 0.0f ,0.0f });
     ResourceManager::GetShader("sprite").setvec4("color", {1.0f,1.0f,1.0f,1.0f});
+    ResourceManager::GetShader("sprite").setBool("isWhite" , false);
     renderer->DrawSprite(ResourceManager::GetTexture("background"), glm::vec2(0.0f, 0.0f), glm::vec2(Width, Height), 0.0f);
 
+    ResourceManager::GetShader("water").use();
+    ResourceManager::GetShader("water").setFloat("time",getTime() * 0.1f);
 
-    gameLevel->Draw(*renderer);
+    gameLevel->Draw(*renderer, *waterRenderer);
 
     particles->Draw();
     player->Draw(*renderer);
@@ -199,30 +232,33 @@ void Game::Render(){
 
     if (this->State == States[GAME_MENU]) {
         std::string sMenu = "MENU";
-        text->RenderText(sMenu, Width / 2.0f - (sMenu.size() * TEXTSIZE / 2.0f), Height / 2.0f - sMenu.size() * TEXTSIZE / 2.0f , 2.0f);
-
+        text->RenderText(sMenu, Width / 2.0f - (sMenu.size() * TEXTSIZE / 2.0f) + 2, Height / 2.0f - sMenu.size() * TEXTSIZE / 2.0f + 2, 1.0f, { 0.0f,0.0f,0.0f });
+        text->RenderText(sMenu, Width / 2.0f - (sMenu.size() * TEXTSIZE / 2.0f), Height / 2.0f - sMenu.size() * TEXTSIZE / 2.0f , 1.0f);
     }
     else  if (this->State == States[GAME_WIN]) {
         std::string sWind = "WIN";
-        text->RenderText(sWind, Width / 2.0f - sWind.size() * TEXTSIZE / 2.0f, Height / 2.0f - sWind.size() * TEXTSIZE / 2.0f, 1.5f);
+        text->RenderText(sWind, Width / 2.0f - sWind.size() * TEXTSIZE / 2.0 + 2, Height / 2.0f - sWind.size() * TEXTSIZE / 2.0 + 2, 1.0f, { 0.0f,0.0f,0.0f });
+        text->RenderText(sWind, Width / 2.0f - sWind.size() * TEXTSIZE / 2.0, Height / 2.0f - sWind.size() * TEXTSIZE / 2.0, 1.0f);
 
     }
     else{
         std::stringstream ss, sp,sr, sh; ss << saveData.Level;
-        text->RenderText("Level: " + ss.str(), Width / 2.0f - SQUERE_SIZE.x / 2.0f, Height / 2.0f - SQUERE_SIZE.y / 2.0f - TEXTSIZE * 2.0f, 0.8f);
+        text->RenderText("Level:" + ss.str(), Width / 2.0f - SQUERE_SIZE.x / 2.0f + 2, Height / 2.0f - SQUERE_SIZE.y / 2.0f - TEXTSIZE * 2.0f + 2, 0.5f, { 0.0f,0.0f,0.0f });
+        text->RenderText("Level:" + ss.str(), Width / 2.0f - SQUERE_SIZE.x / 2.0f, Height / 2.0f-SQUERE_SIZE.y / 2.0f - TEXTSIZE * 2.0f, 0.5f);
         sp << POINTS;
-        text->RenderText("Points : " + sp.str(), Width / 2.0f + sp.str().size() * TEXTSIZE, Height / 2.0f - SQUERE_SIZE.y / 2.0f - TEXTSIZE * 2.0f, 0.8f);
+        text->RenderText("Points:" + sp.str(), Width / 2.0f + sp.str().size() * TEXTSIZE + 2, Height / 2.0f - SQUERE_SIZE.y / 2.0f - TEXTSIZE * 2.0f + 2, 0.5f, { 0.0f,0.0f,0.0f });
+        text->RenderText("Points:" + sp.str(), Width / 2.0f + sp.str().size() * TEXTSIZE, Height / 2.0f - SQUERE_SIZE.y / 2.0f - TEXTSIZE * 2.0f, 0.5f);
         sr << RECORD;
-        text->RenderText("RECORD : " + sr.str(), Width / 2.0f - sp.str().size() * TEXTSIZE, Height / 2.0f + SQUERE_SIZE.y / 2.0f + TEXTSIZE * 2.0f, 1.0f);
+        text->RenderText("RECORD:" + sr.str(), Width / 2.0f + sp.str().size() * TEXTSIZE + 2, Height / 2.0f + SQUERE_SIZE.y / 2.0f + TEXTSIZE * 2.0f + 2, 0.5f, { 0.0f,0.0f,0.0f });
+        text->RenderText("RECORD:" + sr.str(), Width / 2.0f + sp.str().size() * TEXTSIZE, Height / 2.0f + SQUERE_SIZE.y / 2.0f + TEXTSIZE * 2.0f, 0.5f);
         sh << saveData.currLife;
-        text->RenderText("LIFE : " + sh.str(), Width / 2.0f - sh.str().size() * TEXTSIZE, Height / 2.0f - SQUERE_SIZE.y / 2.0f - TEXTSIZE * 2.0f, 0.8f);
+        text->RenderText("X " + sh.str(), Width / 2.0f - sh.str().size() * TEXTSIZE + 2, Height / 2.0f - SQUERE_SIZE.y / 2.0f - TEXTSIZE * 2.0f + 2, 0.5f,{0.0f,0.0f,0.0f});
+        text->RenderText("X " + sh.str(), Width / 2.0f - sh.str().size() * TEXTSIZE, Height / 2.0f - SQUERE_SIZE.y / 2.0f - TEXTSIZE * 2.0f, 0.5f);
 
 
 
 
     }
-
-
 
 
 
@@ -236,19 +272,33 @@ void Game::CharDeath(){
     //dead
     if (saveData.currLife > 0) {
         saveData.currLife--;
+
+
+
+
+        unsigned int LoadedRecord = 0;
+        if (loadGame(LoadedRecord, saveRecordPath)) // если файл есть то мы подгружаем старый прогресс
+        {
+            if (RECORD > LoadedRecord) // если текущий рекорд больше подгруженого
+            {
+                saveGame(RECORD,  saveRecordPath);  // то мы
+
+            }
+        }
+
     }
     else
     {
 
         saveData.Level = 1;
-        saveData.currLife = saveData.Life;
+        saveData.currLife = saveData.MaxLife;
         unsigned int LoadedRecord = 0;
 
-        if (loadGame(LoadedRecord, "save/saveRecord.bin")) // если файл есть то мы подгружаем старый прогресс
+        if (loadGame(LoadedRecord, saveRecordPath)) // если файл есть то мы подгружаем старый прогресс
         {
             if (RECORD > LoadedRecord) // если текущий рекорд больше подгруженого
             {
-                saveGame(RECORD, "save/saveRecord.bin");  // то мы
+                saveGame(RECORD,  saveRecordPath);  // то мы
 
             }
         }
@@ -415,6 +465,24 @@ void Game::SwitchState(GameState state) {
     State = States[state];
     onStateChanged(state);
 }
+
+void Game::SoundUp() {
+music->upSound();
+}
+
+void Game::SoundDown() {
+music->downSound();
+}
+
+double Game::getTime() {
+    using namespace std::chrono;
+    static auto start = steady_clock::now();
+    auto now = steady_clock::now();
+    return duration<double>(now - start).count();
+}
+
+
+
 
 
 //  if (this->Keys[GLFW_KEY_D])

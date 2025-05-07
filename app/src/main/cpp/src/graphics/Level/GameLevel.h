@@ -12,12 +12,15 @@
 
 class GameLevel {
 public:
+    std::function<void()> BrickDestroyed;  // slot for change track
+
+
     std::vector<GameObject> Bricks;
     GameLevel();
     ~GameLevel();
     void Generate(Texture* texture,const glm::vec2& Brick_Size,const glm::vec2& offset, const glm::ivec2& Squere_Size, unsigned int WaterRoots);
 
-    void Draw(SpriteRenderer& reder);
+    void Draw(SpriteRenderer& reder, SpriteRenderer& waterRender);
     void Update(float dt);
 
     bool IsCompleted();

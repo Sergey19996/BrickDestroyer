@@ -42,26 +42,48 @@ void GameLevel::Generate(Texture* texture,const glm::vec2& BRICK_SIZE, const glm
     Pixels_UV_Coords.reserve(width * height);
 }
 
-void GameLevel::Draw(SpriteRenderer& renderer)
+void GameLevel::Draw(SpriteRenderer& renderer, SpriteRenderer& waterRender)
 {
+
     particle->Draw();
     Cracks->Draw(renderer);
-
     int count = 0;
-    Shader& Shader = ResourceManager::GetShader("sprite");
-    Shader.use();
+    Shader& ShaderSolid =renderer.getShader();
+    ShaderSolid.use();
     float TexWidth = ResourceManager::GetTexture("plates").Width;
     float TexHeight = ResourceManager::GetTexture("plates").Height;
-    Shader.setvec2("spriteScale", { 128.0f / TexWidth,128.0f / TexHeight });
+    ShaderSolid.setvec2("spriteScale", { 128.0f / TexWidth,128.0f / TexHeight });
 
     for (GameObject& brick : Bricks) {
         // Pixels_Uv_coords в диапозоне от 0 до макс width и height тектсруы
-        Shader.setvec2("uv", { Pixels_UV_Coords[count].x / TexWidth,Pixels_UV_Coords[count].y / TexHeight });
-        Shader.setvec4("color", brick.color);
-        if(!brick.bDestroyed)
+        ShaderSolid.setvec2("uv", { Pixels_UV_Coords[count].x / TexWidth,Pixels_UV_Coords[count].y / TexHeight });
+        ShaderSolid.setvec4("color", brick.color);
+        if (!brick.bDestroyed)
             brick.Draw(renderer);
         count++;
+    };
+
+
+
+
+    //Water
+    Shader ShaderWater = waterRender.getShader();
+
+    ShaderWater.use();
+
+
+
+    std::vector<unsigned int>& lakesRoots = Generator->getLakesRoots();
+
+    for (int i = 0; i < lakesRoots.size(); i++) {  // water render
+
+        Bricks[lakesRoots[i]].texture = &ResourceManager::GetTexture("water");
+
+        Bricks[lakesRoots[i]].Draw(waterRender);
+        Bricks[lakesRoots[i]].texture = &ResourceManager::GetTexture("plates");
     }
+    //
+
 }
 
 void GameLevel::Update(float dt)
@@ -85,7 +107,7 @@ void GameLevel::Update(float dt)
             else
             {
                 obj->bDestroyed = true;
-
+                BrickDestroyed();
 
                 particle->Spawn(*obj, 1, { obj->size.x / 2.0f - 5,obj->size.y / 2.0f - 5  });  //center - 5 half of particle tex (10)
                 particle->Spawn(*obj, 1, { 0 ,0}); // left up
@@ -133,17 +155,17 @@ void GameLevel::init( std::vector<uint8_t>& indices,const int& row, const int& l
 
 
 
-
     //unsigned int SQUERE_CenterX = SQUERE_X / 2;
     //unsigned int SQUERE_CenterY = SQUERE_Y / 2;
 
     float TextureSize = ResourceManager::GetTexture("plates").Width;
     int TextureRow = TextureSize / 128.0f;
 
-    for (unsigned int x = 0; x < row; x++)
+    for (unsigned int y = 0; y < line; y++)
     {
-        for (unsigned int y = 0; y < line; y++)
+        for (unsigned int x = 0; x < row; x++)
         {
+
 
 
             //brick index calc
@@ -157,14 +179,15 @@ void GameLevel::init( std::vector<uint8_t>& indices,const int& row, const int& l
             //float uvY = pxlY / TextureSize;
             Pixels_UV_Coords.push_back(glm::vec2(pxlX, pxlY));
             //
-            GameObject Box(glm::vec2(x * BRICK_SIZE.x + offset.x, y * BRICK_SIZE.y + offset.y), BRICK_SIZE, 0, texture);
+            GameObject Box(glm::vec2(x * BRICK_SIZE.x + offset.x, y * BRICK_SIZE.y + offset.y), BRICK_SIZE, rand() % 4 * 90, texture);
 
-            if (indices[row * y + x] == 7) //water index
+            if (indices[row * y + x] == 7) //simple
             {
                 Box.IsDanger = true;
             }
 
             Bricks.push_back(Box);
+
         }
     }
 

@@ -7,13 +7,16 @@
 
 #include <AL/al.h>
 #include <vector>
-
+#include <sndfile.h>
+#include <android/asset_manager.h>
+#include <android/asset_manager_jni.h>
+#include <game-activity/GameActivity.h>
 class SoundBuffer {
 public:
     static SoundBuffer* get();
 
 
-    ALuint addSoundEffect(const char* filename);
+    ALuint addSoundEffect(AAsset* asset_, GameActivity* activity);
     bool removeSoundEffect(const ALuint& buffer);
 
 
@@ -21,8 +24,9 @@ private:
     SoundBuffer();
     ~SoundBuffer();
     std::vector<ALuint> p_SoundEffectBuffers;
-
-
+    GameActivity* activity;
+    AAsset* asset = nullptr;
+    SF_INFO p_Sfinfo;
 };
 
 

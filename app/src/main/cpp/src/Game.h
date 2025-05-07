@@ -13,15 +13,16 @@
 #include "gameStates.hpp"
 #include "graphics/Direction.hpp"
 
-
+#include <jni.h>
+#include <android/native_activity.h>
 struct SaveData
 {
 
 
-    unsigned int Life;
+    unsigned int MaxLife;
     unsigned int currLife;
     unsigned int Level;
-    SaveData() : Life(3), currLife(3),Level(1) {
+    SaveData() : MaxLife(3), currLife(3),Level(1) {
         std::cout << "Hello" << std::endl;
     };
 
@@ -29,7 +30,7 @@ struct SaveData
 
 
 template<typename T>
-void saveGame(const T Data, const std::string& fileName) {
+void saveGame(const T& Data, const std::string& fileName) {
     std::ofstream outFile(fileName, std::ios::binary);
     if (outFile) {
         outFile.write(reinterpret_cast<const char*>(&Data), sizeof(T));
@@ -69,8 +70,10 @@ bool loadGame(T& Data, const std::string& fileName) {
 
 class Game {
 public:
-    Game( android_app*,float width, float height);
+
     std::function<void(GameState)> onStateChanged;
+    Game( android_app*,float width, float height);
+
     ~Game();
 
 
@@ -92,6 +95,11 @@ public:
     void SwitchState( GameState state);
     SpriteRenderer* getSpriteRenderer() { return  renderer; };
 
+
+    void SoundUp();
+    void SoundDown();
+
+    double getTime();
 private:
 
     const float Width, Height;
@@ -111,6 +119,11 @@ private:
     void DoCollisions();
     bool checkCollision(character& player, GameObject& box);
     SpriteRenderer* renderer;
+    SpriteRenderer* waterRenderer;
+
+    std::string saveGamePath = "/saveGame.bin";
+    std::string saveRecordPath =  "/saveRecord.bin";
+
 };
 
 

@@ -171,6 +171,37 @@ void Engine::handleInput() {
         // no inputs yet.
         return;
     }
+
+    // === KEY EVENTS ===
+    for (int i = 0; i < inputBuffer->keyEventsCount; i++) {
+        const auto& keyEvent = inputBuffer->keyEvents[i];
+
+        int keyCode = keyEvent.keyCode;
+        int action = keyEvent.action;
+
+        if (action == AKEY_EVENT_ACTION_DOWN) {
+            switch (keyCode) {
+                case AKEYCODE_VOLUME_UP:
+                    BrickDestroyer->SoundUp();
+                    aout << "Volume UP pressed\n";
+                    // твой код
+                    break;
+                case AKEYCODE_VOLUME_DOWN:
+                    BrickDestroyer->SoundDown();
+                    aout << "Volume DOWN pressed\n";
+                    // твой код
+                    break;
+                default:
+                    aout << "Key DOWN: " << keyCode << "\n";
+                    break;
+            }
+        } else if (action == AKEY_EVENT_ACTION_UP) {
+            aout << "Key UP: " << keyCode << "\n";
+        }
+    }
+
+    android_app_clear_key_events(inputBuffer);
+
     // handle motion events (motionEventsCounts can be 0).
     for (auto i = 0; i < inputBuffer->motionEventsCount; i++) {
         auto &motionEvent = inputBuffer->motionEvents[i];
@@ -189,6 +220,7 @@ void Engine::handleInput() {
         // determine the action type and process the event accordingly.
         switch (action & AMOTION_EVENT_ACTION_MASK) {
             case AMOTION_EVENT_ACTION_DOWN:
+
             case AMOTION_EVENT_ACTION_POINTER_DOWN:
                 aout << "(" << pointer.id << ", " << x << ", " << y << ") "
                      << "Pointer Down";

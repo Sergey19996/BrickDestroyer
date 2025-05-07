@@ -6,6 +6,8 @@
 #define MY_APPLICATION_MUSICBUFFER_H
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
+#include <game-activity/GameActivity.h>
+
 #include "AL/al.h"
 #include <sndfile.h>
 class MusicBuffer
@@ -20,8 +22,13 @@ public:
     ALint getSource();
 
     MusicBuffer(const char* filename);
-    MusicBuffer(AAsset* asset);
+    MusicBuffer(AAsset* asset, GameActivity* activity);
 
+    void SetVoolumeControlToMusic(GameActivity *activity);
+    void UpdateVolume();
+
+    void upSound();
+    void downSound();
     ~MusicBuffer();
 private:
 
@@ -37,7 +44,7 @@ private:
     ALenum p_Format;
 
     AAsset* asset = nullptr;
-
+GameActivity * activity;
     MusicBuffer() = delete;
 };
 

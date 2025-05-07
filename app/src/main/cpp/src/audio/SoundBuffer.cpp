@@ -5,87 +5,76 @@
 #include <sndfile.h>  // для декода  тоолько звука
 #include <inttypes.h>  // поддержка  uint8,16,32
 #include <AL/alext.h>
+#include "../graphics/ResourceManager.h"
 SoundBuffer* SoundBuffer::get()
 {
     static SoundBuffer* buffer = new SoundBuffer();
     return buffer;
 }
 
-ALuint SoundBuffer::addSoundEffect(const char* filename)
+ALuint SoundBuffer::addSoundEffect(AAsset* asset_, GameActivity* activity)
 {
-    ALenum err, format;
-    ALuint buffer;
-    SNDFILE* sndFile;
-    SF_INFO sfinfo;
-    short* membuf;
-    sf_count_t num_frames;
-    ALsizei num_bytes;
+    this->activity = activity;
+    asset = asset_;
 
+    // 1. Open using virtual I/O
+    SF_VIRTUAL_IO vio;
+    vio.get_filelen = ResourceManager::get_filelen;
+    vio.seek = ResourceManager::seek;
+    vio.read = ResourceManager::read;
+    vio.tell = ResourceManager::tell;
 
-    sndFile = sf_open(filename, SFM_READ, &sfinfo);
+    SNDFILE* sndFile = sf_open_virtual(&vio, SFM_READ, &p_Sfinfo, asset);
     if (!sndFile) {
-        fprintf(stderr, "Could not open Audio in %s: %s\n", filename, sf_strerror(sndFile));
+        fprintf(stderr, "Could not open audio asset: %s\n", sf_strerror(sndFile));
         return 0;
     }
-    if (sfinfo.frames < 1 || sfinfo.frames >(sf_count_t)(INT_MAX / sizeof(short)) / sfinfo.channels) {
-        fprintf(stderr, "Bad sample count in %s (%" PRId64 ")\n", filename, sfinfo.frames);
-        sf_close(sndFile);
-        return 0;
-    }
-    //get the sound format and figure out OpenAL format
-    format = AL_NONE;
-    if (sfinfo.channels == 1)
+
+    // 2. Determine format
+    ALenum format = AL_NONE;
+    if (p_Sfinfo.channels == 1)
         format = AL_FORMAT_MONO16;
-    else if (sfinfo.channels == 2)
+    else if (p_Sfinfo.channels == 2)
         format = AL_FORMAT_STEREO16;
-    else if (sfinfo.channels == 3) {
+    else if (p_Sfinfo.channels == 3 &&
+             sf_command(sndFile, SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
+        format = AL_FORMAT_BFORMAT2D_16;
 
-        if (sf_command(sndFile, SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
-            format = AL_FORMAT_BFORMAT2D_16;
-
-    }
     if (!format) {
-
-        fprintf(stderr, "Unsupported  channel count: %d\n", sfinfo.channels);
+        fprintf(stderr, "Unsupported channel count: %d\n", p_Sfinfo.channels);
         sf_close(sndFile);
         return 0;
-
     }
 
-    //Decode to a buffer
-    membuf = static_cast<short*>(malloc((size_t)(sfinfo.frames * sfinfo.channels) * sizeof(short))); //allocate memory for all sound
-    num_frames = sf_read_short(sndFile, membuf, sfinfo.frames);
-    if (num_frames < 1) {
+    // 3. Read audio data
+    sf_count_t numFrames = p_Sfinfo.frames;
+    short* membuf = static_cast<short*>(malloc(numFrames * p_Sfinfo.channels * sizeof(short)));
+    sf_count_t framesRead = sf_read_short(sndFile, membuf, numFrames * p_Sfinfo.channels);
 
+    if (framesRead < 1) {
+        fprintf(stderr, "Failed to read audio data: %" PRId64 "\n", framesRead);
         free(membuf);
         sf_close(sndFile);
-        fprintf(stderr, "Failed to read samples in %s (%" PRId64 ")\n", filename, num_frames);
         return 0;
-
     }
-    num_bytes = (ALsizei)(num_frames * sfinfo.channels) * (ALsizei)sizeof(short);
 
-
-    buffer = 0;
+    ALuint buffer;
     alGenBuffers(1, &buffer);
-    alBufferData(buffer, format, membuf, num_bytes, sfinfo.samplerate);
+    alBufferData(buffer, format, membuf, framesRead * sizeof(short), p_Sfinfo.samplerate);
 
     free(membuf);
     sf_close(sndFile);
 
-
-    err = alGetError();
+    // 4. Check OpenAL error
+    ALenum err = alGetError();
     if (err != AL_NO_ERROR) {
-
-        fprintf(stderr, "OPenAL: ERROR: %s\n", alGetString(err));
-        if(buffer && alIsBuffer(buffer))
+        fprintf(stderr, "OpenAL error: %s\n", alGetString(err));
+        if (buffer && alIsBuffer(buffer))
             alDeleteBuffers(1, &buffer);
         return 0;
-
-
     }
-    p_SoundEffectBuffers.push_back(buffer);
 
+    p_SoundEffectBuffers.push_back(buffer);
     return buffer;
 }
 

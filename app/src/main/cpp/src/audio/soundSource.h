@@ -11,7 +11,7 @@ public:
     SoundSource();
     ~SoundSource();
     void generate();
-    void Play(const ALuint buffer_to_play);
+    void Play(const ALuint buffer_to_play, float volume);
 
 
 private:

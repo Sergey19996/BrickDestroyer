@@ -19,10 +19,12 @@ public:
     uint8_t GenerateGroundIndex(uint8_t escapingNumber = 0);
     std::vector <uint8_t>& AlgorithmBasicGround(unsigned int row, unsigned int line);
     std::vector <uint8_t>& AlgorithmLakeGround(unsigned int row, unsigned int line,unsigned int LakesCount);
+    std::vector<unsigned int>& getLakesRoots() { return lakesRoots; };
     void reset();
 
 private:
     std::vector <uint8_t> indices;
+    std::vector<unsigned int> lakesRoots;
     CellChecker checker;
 
 };

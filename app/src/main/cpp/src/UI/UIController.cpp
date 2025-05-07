@@ -11,10 +11,12 @@ UIController::UIController(Game* game, const float Width, const float Height) : 
     UiMap["Arrow_Up"] = new ui_Arrow (ScreenSize.x,ScreenSize.y,charDirection::Up );
     UiMap["Arrow_Left"] = new ui_Arrow (ScreenSize.x,ScreenSize.y,charDirection::Left);
     UiMap["Button_Go"] = new ui_GO(ScreenSize.x, ScreenSize.y);
-    UiMap["Main_Back"] = new ui_BackGround(ScreenSize.x, ScreenSize.y);
+    UiMap["Main_Back"] = new ui_BackGround(ScreenSize.x, ScreenSize.y,&ResourceManager::GetTexture("MainBack"));
+    UiMap["Credits"] = new ui_BackGround(ScreenSize.x, ScreenSize.y,&ResourceManager::GetTexture("Credits"));
     UiMap["Main_Char"] = new ui_BackCharacter(ScreenSize.x, ScreenSize.y);
     UiMap["Main_BTN_START"] = new ui_START(ScreenSize.x, ScreenSize.y);
     UiMap["Main_BTN_Credits"] = new ui_Credits(ScreenSize.x, ScreenSize.y);
+    UiMap["Health"] = new ui_Health(ScreenSize.x,ScreenSize.y);
    // UiArrows.push_back(ui_Arrow(ScreenSize.x,ScreenSize.y,charDirection::Down));
    // UiArrows.push_back(ui_Arrow(ScreenSize.x,ScreenSize.y,charDirection::Right));
    // UiArrows.push_back(ui_Arrow(ScreenSize.x,ScreenSize.y,charDirection::Up));
@@ -53,6 +55,7 @@ void UIController::SetNewState(GameState state) {
             arrows.push_back(  dynamic_cast<ui_Arrow*>(UiMap["Arrow_Right"]) );
             arrows.push_back(  dynamic_cast<ui_Arrow*>(UiMap["Arrow_Up"]) );
             arrows.push_back( dynamic_cast<ui_Arrow*>(UiMap["Arrow_Left"]) );
+            staticUi.push_back( UiMap["Health"]);
 
         break;
         case GAME_MENU:
@@ -66,6 +69,10 @@ void UIController::SetNewState(GameState state) {
             buttons.push_back(  dynamic_cast<ui_Button*>(UiMap["Button_Go"]));
             break;
 
+        case GAME_CREDITS:
+            staticUi.push_back(   UiMap["Credits"] );
+            buttons.push_back(  dynamic_cast<ui_Button*> (UiMap["Main_BTN_START"]));
+            break;
     }
 
 }

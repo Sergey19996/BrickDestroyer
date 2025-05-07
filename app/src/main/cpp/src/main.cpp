@@ -15,6 +15,8 @@ extern "C" {
  * @param pApp the app the commands are coming from
  * @param cmd the command to handle
  */
+
+
 void handle_cmd(android_app *pApp, int32_t cmd) {
     switch (cmd) {
         case APP_CMD_INIT_WINDOW:
@@ -24,6 +26,7 @@ void handle_cmd(android_app *pApp, int32_t cmd) {
             // android_main function and the APP_CMD_TERM_WINDOW handler case.
 
             pApp->userData = new Engine(pApp);
+
             break;
         case APP_CMD_TERM_WINDOW:
             // The window is being destroyed. Use this to clean up your userData to avoid leaking
